@@ -1,85 +1,98 @@
-import sqlite3
-from tkinter import Tk, Label, Entry, Button, messagebox, Listbox
+import json
+import os
 
-# Conexión a la base de datos
-conn = sqlite3.connect('inventario.db')
-cursor = conn.cursor()
+# Archivo para guardar el inventario
+INVENTARIO_FILE = "inventario.json"
 
-# Crear tabla si no existe
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS productos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    cantidad INTEGER NOT NULL,
-    precio REAL NOT NULL
-)
-''')
-conn.commit()
+# Cargar o inicializar el inventario
+def cargar_inventario():
+    if os.path.exists(INVENTARIO_FILE):
+        with open(INVENTARIO_FILE, "r") as file:
+            return json.load(file)
+    return {}
 
-# Funciones
-def agregar_producto():
-    nombre = entry_nombre.get()
-    cantidad = entry_cantidad.get()
-    precio = entry_precio.get()
+# Guardar inventario en el archivo
+def guardar_inventario(inventario):
+    with open(INVENTARIO_FILE, "w") as file:
+        json.dump(inventario, file, indent=4)
 
-    if not (nombre and cantidad.isdigit() and precio.replace('.', '', 1).isdigit()):
-        messagebox.showerror("Error", "Por favor, ingresa datos válidos.")
+# Función para agregar un producto
+def agregar_producto(inventario):
+    codigo = input("Ingrese el código del producto: ")
+    if codigo in inventario:
+        print("El producto ya existe en el inventario.")
         return
+    nombre = input("Ingrese el nombre del producto: ")
+    cantidad = int(input("Ingrese la cantidad del producto: "))
+    precio = float(input("Ingrese el precio del producto: "))
+    inventario[codigo] = {"nombre": nombre, "cantidad": cantidad, "precio": precio}
+    print("Producto agregado con éxito.")
 
-    cursor.execute("INSERT INTO productos (nombre, cantidad, precio) VALUES (?, ?, ?)",
-                   (nombre, int(cantidad), float(precio)))
-    conn.commit()
-    messagebox.showinfo("Éxito", "Producto agregado correctamente.")
-    limpiar_campos()
-    actualizar_lista()
-
-def actualizar_lista():
-    listbox.delete(0, 'end')
-    cursor.execute("SELECT * FROM productos")
-    productos = cursor.fetchall()
-    for producto in productos:
-        listbox.insert('end', f"ID: {producto[0]}, {producto[1]}, Cantidad: {producto[2]}, Precio: ${producto[3]:.2f}")
-
-def eliminar_producto():
-    seleccion = listbox.curselection()
-    if not seleccion:
-        messagebox.showerror("Error", "Selecciona un producto para eliminar.")
+# Función para mostrar el inventario
+def mostrar_inventario(inventario):
+    if not inventario:
+        print("El inventario está vacío.")
         return
+    print("\nInventario actual:")
+    print("{:<10} {:<20} {:<10} {:<10}".format("Código", "Nombre", "Cantidad", "Precio"))
+    print("-" * 50)
+    for codigo, datos in inventario.items():
+        print("{:<10} {:<20} {:<10} {:<10.2f}".format(codigo, datos["nombre"], datos["cantidad"], datos["precio"]))
 
-    producto = listbox.get(seleccion[0])
-    producto_id = int(producto.split(",")[0].split(":")[1].strip())
-    cursor.execute("DELETE FROM productos WHERE id = ?", (producto_id,))
-    conn.commit()
-    messagebox.showinfo("Éxito", "Producto eliminado correctamente.")
-    actualizar_lista()
+# Función para actualizar un producto
+def actualizar_producto(inventario):
+    codigo = input("Ingrese el código del producto a actualizar: ")
+    if codigo not in inventario:
+        print("El producto no existe en el inventario.")
+        return
+    print("Producto encontrado. Deje el campo vacío para no modificarlo.")
+    nombre = input("Ingrese el nuevo nombre del producto: ")
+    cantidad = input("Ingrese la nueva cantidad del producto: ")
+    precio = input("Ingrese el nuevo precio del producto: ")
 
-def limpiar_campos():
-    entry_nombre.delete(0, 'end')
-    entry_cantidad.delete(0, 'end')
-    entry_precio.delete(0, 'end')
+    if nombre:
+        inventario[codigo]["nombre"] = nombre
+    if cantidad:
+        inventario[codigo]["cantidad"] = int(cantidad)
+    if precio:
+        inventario[codigo]["precio"] = float(precio)
+    print("Producto actualizado con éxito.")
 
-# Interfaz gráfica
-root = Tk()
-root.title("Sistema de Inventarios Básico")
+# Función para eliminar un producto
+def eliminar_producto(inventario):
+    codigo = input("Ingrese el código del producto a eliminar: ")
+    if codigo in inventario:
+        del inventario[codigo]
+        print("Producto eliminado con éxito.")
+    else:
+        print("El producto no existe en el inventario.")
 
-Label(root, text="Nombre del Producto:").grid(row=0, column=0, padx=10, pady=5)
-entry_nombre = Entry(root)
-entry_nombre.grid(row=0, column=1, padx=10, pady=5)
+# Menú principal
+def menu():
+    inventario = cargar_inventario()
+    while True:
+        print("\n--- Sistema de Inventarios ---")
+        print("1. Agregar producto")
+        print("2. Mostrar inventario")
+        print("3. Actualizar producto")
+        print("4. Eliminar producto")
+        print("5. Salir")
+        opcion = input("Seleccione una opción: ")
 
-Label(root, text="Cantidad:").grid(row=1, column=0, padx=10, pady=5)
-entry_cantidad = Entry(root)
-entry_cantidad.grid(row=1, column=1, padx=10, pady=5)
+        if opcion == "1":
+            agregar_producto(inventario)
+        elif opcion == "2":
+            mostrar_inventario(inventario)
+        elif opcion == "3":
+            actualizar_producto(inventario)
+        elif opcion == "4":
+            eliminar_producto(inventario)
+        elif opcion == "5":
+            guardar_inventario(inventario)
+            print("Inventario guardado. ¡Adiós!")
+            break
+        else:
+            print("Opción no válida. Intente nuevamente.")
 
-Label(root, text="Precio:").grid(row=2, column=0, padx=10, pady=5)
-entry_precio = Entry(root)
-entry_precio.grid(row=2, column=1, padx=10, pady=5)
-
-Button(root, text="Agregar Producto", command=agregar_producto).grid(row=3, column=0, columnspan=2, pady=10)
-Button(root, text="Eliminar Producto", command=eliminar_producto).grid(row=4, column=0, columnspan=2, pady=10)
-
-listbox = Listbox(root, width=50, height=15)
-listbox.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
-
-actualizar_lista()
-
-root.mainloop()
+if __name__ == "__main__":
+    menu()
