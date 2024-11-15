@@ -1,0 +1,85 @@
+import sqlite3
+from tkinter import Tk, Label, Entry, Button, messagebox, Listbox
+
+# Conexión a la base de datos
+conn = sqlite3.connect('inventario.db')
+cursor = conn.cursor()
+
+# Crear tabla si no existe
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS productos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    cantidad INTEGER NOT NULL,
+    precio REAL NOT NULL
+)
+''')
+conn.commit()
+
+# Funciones
+def agregar_producto():
+    nombre = entry_nombre.get()
+    cantidad = entry_cantidad.get()
+    precio = entry_precio.get()
+
+    if not (nombre and cantidad.isdigit() and precio.replace('.', '', 1).isdigit()):
+        messagebox.showerror("Error", "Por favor, ingresa datos válidos.")
+        return
+
+    cursor.execute("INSERT INTO productos (nombre, cantidad, precio) VALUES (?, ?, ?)",
+                   (nombre, int(cantidad), float(precio)))
+    conn.commit()
+    messagebox.showinfo("Éxito", "Producto agregado correctamente.")
+    limpiar_campos()
+    actualizar_lista()
+
+def actualizar_lista():
+    listbox.delete(0, 'end')
+    cursor.execute("SELECT * FROM productos")
+    productos = cursor.fetchall()
+    for producto in productos:
+        listbox.insert('end', f"ID: {producto[0]}, {producto[1]}, Cantidad: {producto[2]}, Precio: ${producto[3]:.2f}")
+
+def eliminar_producto():
+    seleccion = listbox.curselection()
+    if not seleccion:
+        messagebox.showerror("Error", "Selecciona un producto para eliminar.")
+        return
+
+    producto = listbox.get(seleccion[0])
+    producto_id = int(producto.split(",")[0].split(":")[1].strip())
+    cursor.execute("DELETE FROM productos WHERE id = ?", (producto_id,))
+    conn.commit()
+    messagebox.showinfo("Éxito", "Producto eliminado correctamente.")
+    actualizar_lista()
+
+def limpiar_campos():
+    entry_nombre.delete(0, 'end')
+    entry_cantidad.delete(0, 'end')
+    entry_precio.delete(0, 'end')
+
+# Interfaz gráfica
+root = Tk()
+root.title("Sistema de Inventarios Básico")
+
+Label(root, text="Nombre del Producto:").grid(row=0, column=0, padx=10, pady=5)
+entry_nombre = Entry(root)
+entry_nombre.grid(row=0, column=1, padx=10, pady=5)
+
+Label(root, text="Cantidad:").grid(row=1, column=0, padx=10, pady=5)
+entry_cantidad = Entry(root)
+entry_cantidad.grid(row=1, column=1, padx=10, pady=5)
+
+Label(root, text="Precio:").grid(row=2, column=0, padx=10, pady=5)
+entry_precio = Entry(root)
+entry_precio.grid(row=2, column=1, padx=10, pady=5)
+
+Button(root, text="Agregar Producto", command=agregar_producto).grid(row=3, column=0, columnspan=2, pady=10)
+Button(root, text="Eliminar Producto", command=eliminar_producto).grid(row=4, column=0, columnspan=2, pady=10)
+
+listbox = Listbox(root, width=50, height=15)
+listbox.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
+
+actualizar_lista()
+
+root.mainloop()
