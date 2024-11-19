@@ -1,0 +1,98 @@
+import json
+import os
+
+# Archivo para guardar el inventario
+INVENTARIO_FILE = "inventario.json"
+
+# Cargar o inicializar el inventario
+def cargar_inventario():
+    if os.path.exists(INVENTARIO_FILE):
+        with open(INVENTARIO_FILE, "r") as file:
+            return json.load(file)
+    return {}
+
+# Guardar inventario en el archivo
+def guardar_inventario(inventario):
+    with open(INVENTARIO_FILE, "w") as file:
+        json.dump(inventario, file, indent=4)
+
+# Función para agregar un producto
+def agregar_producto(inventario):
+    codigo = input("Ingrese el código del producto: ")
+    if codigo in inventario:
+        print("El producto ya existe en el inventario.")
+        return
+    nombre = input("Ingrese el nombre del producto: ")
+    cantidad = int(input("Ingrese la cantidad del producto: "))
+    precio = float(input("Ingrese el precio del producto: "))
+    inventario[codigo] = {"nombre": nombre, "cantidad": cantidad, "precio": precio}
+    print("Producto agregado con éxito.")
+
+# Función para mostrar el inventario
+def mostrar_inventario(inventario):
+    if not inventario:
+        print("El inventario está vacío.")
+        return
+    print("\nInventario actual:")
+    print("{:<10} {:<20} {:<10} {:<10}".format("Código", "Nombre", "Cantidad", "Precio"))
+    print("-" * 50)
+    for codigo, datos in inventario.items():
+        print("{:<10} {:<20} {:<10} {:<10.2f}".format(codigo, datos["nombre"], datos["cantidad"], datos["precio"]))
+
+# Función para actualizar un producto
+def actualizar_producto(inventario):
+    codigo = input("Ingrese el código del producto a actualizar: ")
+    if codigo not in inventario:
+        print("El producto no existe en el inventario.")
+        return
+    print("Producto encontrado. Deje el campo vacío para no modificarlo.")
+    nombre = input("Ingrese el nuevo nombre del producto: ")
+    cantidad = input("Ingrese la nueva cantidad del producto: ")
+    precio = input("Ingrese el nuevo precio del producto: ")
+
+    if nombre:
+        inventario[codigo]["nombre"] = nombre
+    if cantidad:
+        inventario[codigo]["cantidad"] = int(cantidad)
+    if precio:
+        inventario[codigo]["precio"] = float(precio)
+    print("Producto actualizado con éxito.")
+
+# Función para eliminar un producto
+def eliminar_producto(inventario):
+    codigo = input("Ingrese el código del producto a eliminar: ")
+    if codigo in inventario:
+        del inventario[codigo]
+        print("Producto eliminado con éxito.")
+    else:
+        print("El producto no existe en el inventario.")
+
+# Menú principal
+def menu():
+    inventario = cargar_inventario()
+    while True:
+        print("\n--- Sistema de Inventarios ---")
+        print("1. Agregar producto")
+        print("2. Mostrar inventario")
+        print("3. Actualizar producto")
+        print("4. Eliminar producto")
+        print("5. Salir")
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == "1":
+            agregar_producto(inventario)
+        elif opcion == "2":
+            mostrar_inventario(inventario)
+        elif opcion == "3":
+            actualizar_producto(inventario)
+        elif opcion == "4":
+            eliminar_producto(inventario)
+        elif opcion == "5":
+            guardar_inventario(inventario)
+            print("Inventario guardado. ¡Adiós!")
+            break
+        else:
+            print("Opción no válida. Intente nuevamente.")
+
+if __name__ == "__main__":
+    menu()
